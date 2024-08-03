@@ -1,20 +1,15 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="/static/tailwindcss.js"></script>
-</head>
-<body>
-  <h1 class="text-3xl font-bold underline">
-    Hello world!
-  </h1>
+{% extends "base.html" %}
+{% block body %}
 
-  {% for name, folders in collection.folders.items() %}
-  <h3>{{ name }}</h3>
-    {% for folder in  folders %}
-    <p>{{ folder.path }}</p>
-    {% endfor %}
+<h1 class="text-3xl font-bold underline">Hello world!</h1>
+
+{% for name, folders in collection.folders.items() %}
+<h3>{{ name }}</h3>
+{% for folder in  folders %}
+  <p>
+    <a href="/folder/{{name}}/{{loop.index}}">{{ folder.path | urlencode }}</a>
+  </p>
   {% endfor %}
-</body>
-</html>
+{% endfor %}
+
+{% endblock %}
