@@ -1,0 +1,9 @@
+[project]
+name = "barber"
+description = """
+Image collections manager
+"""
+version = "0.0"
+
+[tool.setuptools]
+packages = ["barber"]
