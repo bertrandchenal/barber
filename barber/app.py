@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 import uvicorn
+import jinja2
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +20,7 @@ cfg = load_config(Path(os.environ.get("BARBER_TOML", "./barber.toml")))
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-templates = Jinja2Templates(directory=HERE / "templates")
+templates = Jinja2Templates(directory=HERE / "templates", undefined=jinja2.StrictUndefined)
 collection = Collection()
 for name, pattern in cfg["sources"].items():
     collection.add_source(name, pattern)
@@ -45,10 +46,9 @@ def read_item(request: Request, name: str, pos: int):
     return resp
 
 
-@app.get("/image/{uuid}", response_class=HTMLResponse)
-def read_item(request: Request, uuid: str):
-    image = Image.get(uuid)
-    memfile = image.path.open("rb")
-    response = StreamingResponse(memfile, media_type="image/jpeg")
+@app.get("/thumb/{digest}", response_class=HTMLResponse)
+def thumb(request: Request, digest: str):
+    image = Image.get(digest)
+    response = StreamingResponse(image.thumb(), media_type="image/jpeg")
     response.headers["Content-Disposition"] = f"inline; filename={image.path.name}"
     return response

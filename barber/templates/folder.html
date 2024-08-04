@@ -3,10 +3,8 @@
 
 <h1 class="text-3xl font-bold underline">Folder</h1>
 
-<!-- {% for image in folder.images %} -->
-<!-- <img src="/img/{{image.uuid}}"> -->
-<!-- {% endfor %} -->
-
-<img src="/image/{{folder.images[0].uuid}}">
+{% for image in folder.images %}
+<img src="/thumb/{{image.digest}}" title="{{image.path}}">
+{% endfor %}
 
 {% endblock %}
