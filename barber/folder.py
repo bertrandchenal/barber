@@ -1,14 +1,15 @@
 import io
 import os
 import uuid
+from datetime import datetime
 from hashlib import md5
 from glob import glob
 from pathlib import Path
 
-from diskcache import Cache
+from nagra import Transaction, Table
 from PIL import Image as PILImage, ImageOps
 
-from barber.utils import logger
+from barber.utils import logger, init_db
 
 
 DISK_MIN_FILE_SIZE = 100 * 1024
@@ -21,13 +22,13 @@ def digest(content):
 
 
 class Image:
-    __slots__ = ["path", "digest", "cache_dir"]
+    __slots__ = ["path", "digest", "db_uri"]
     _by_digest = {}
 
-    def __init__(self, path: Path, cache_dir: Path):
+    def __init__(self, path: Path, db_uri: Path):
         self.path = path
         self.digest = digest(path.open("rb").read(DIGEST_HEAD))
-        self.cache_dir = cache_dir
+        self.db_uri = db_uri
         Image._by_digest[self.digest] = self
 
     @classmethod
@@ -35,10 +36,13 @@ class Image:
         return cls._by_digest[digest]
 
     def thumb(self):
-        with Cache(self.cache_dir, disk_min_file_size=DISK_MIN_FILE_SIZE) as cache:
+        with Transaction(self.db_uri):
+            thumb_table = Table.get("thumb")
             # Return from cache if key exists
-            if thumb := cache.get(self.digest):
-                return io.BytesIO(thumb)
+            select = thumb_table.select("content").where("(= digest {})")
+            if record := select.execute(self.digest).fetchone():
+                (content,) = record
+                return io.BytesIO(content)
             # Compute thumb
             logger.info("Generate thumbnail for %s", self.path)
             im = PILImage.open(self.path)
@@ -49,26 +53,33 @@ class Image:
             im.save(thumb, format=fmt)
             thumb.seek(0)
             # Save to cache and return
-            cache.set(self.digest, thumb.getvalue())
+            thumb_table.upsert().execute(
+                self.digest,
+                thumb.getvalue(),
+                datetime.now(),
+            )
             return thumb
 
     def full(self):
         return self.path.open("rb")
 
+    def flip_star(self):
+        return True
+
 
 class Folder:
     def __init__(self, path: Path):
         self.path = path
-        cache_dir = path / ".thumbs"
-        cache_dir.mkdir(exist_ok=True)
-        self.images = [Image(p, cache_dir=cache_dir) for p in sorted(self._images())]
+        db_uri = f"sqlite://{self.path}/.thumbs.db"
+        init_db(db_uri)
+        self.images = [Image(p, db_uri) for p in sorted(self._images())]
         logger.info("Added folder '%s' wih %s images", self.path, len(self.images))
 
     def _images(self):
         for file in self.path.iterdir():
             if file.is_dir():
                 yield from (f for f in file.iterdir() if self.is_image(f))
-            else:
+            elif self.is_image(file):
                 yield file
 
     @staticmethod

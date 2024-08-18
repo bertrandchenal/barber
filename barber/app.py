@@ -57,6 +57,13 @@ def thumb(request: Request, digest: str):
     return response
 
 
+@app.post("/star/{digest}/{filename}", response_class=HTMLResponse)
+def star(request: Request, digest: str):
+    image = Image.get(digest)
+    value = image.flip_star()
+    return "★" if value else "☆"
+
+
 @app.get("/img/{digest}/{filename}", response_class=HTMLResponse)
 def img(request: Request, digest: str):
     image = Image.get(digest)
