@@ -20,7 +20,9 @@ cfg = load_config(Path(os.environ.get("BARBER_TOML", "./barber.toml")))
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-templates = Jinja2Templates(directory=HERE / "templates", undefined=jinja2.StrictUndefined)
+templates = Jinja2Templates(
+    directory=HERE / "templates", undefined=jinja2.StrictUndefined
+)
 collection = Collection()
 for name, pattern in cfg["sources"].items():
     collection.add_source(name, pattern)
@@ -46,7 +48,7 @@ def read_item(request: Request, name: str, pos: int):
     return resp
 
 
-@app.get("/thumb/{digest}", response_class=HTMLResponse)
+@app.get("/thumb/{digest}/{filename}", response_class=HTMLResponse)
 def thumb(request: Request, digest: str):
     # TODO handle file ext (jpg vs png)
     image = Image.get(digest)
@@ -55,7 +57,7 @@ def thumb(request: Request, digest: str):
     return response
 
 
-@app.get("/img/{digest}", response_class=HTMLResponse)
+@app.get("/img/{digest}/{filename}", response_class=HTMLResponse)
 def img(request: Request, digest: str):
     image = Image.get(digest)
     response = StreamingResponse(image.full(), media_type="image/jpeg")

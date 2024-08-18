@@ -15,6 +15,7 @@ DISK_MIN_FILE_SIZE = 100 * 1024
 OK_EXT = (".png", ".jpg", ".jpeg")
 DIGEST_HEAD = 4 * 1024
 
+
 def digest(content):
     return md5(content).hexdigest()
 
