@@ -4,7 +4,9 @@
 <h1 class="text-3xl font-bold underline">Folder</h1>
 
 {% for image in folder.images %}
-<img src="/thumb/{{image.digest}}" title="{{image.path}}">
+<a href="/img/{{image.digest}}">
+  <img src="/thumb/{{image.digest}}" title="{{image.path}}">
+</a>
 {% endfor %}
 
 {% endblock %}

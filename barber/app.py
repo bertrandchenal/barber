@@ -48,7 +48,16 @@ def read_item(request: Request, name: str, pos: int):
 
 @app.get("/thumb/{digest}", response_class=HTMLResponse)
 def thumb(request: Request, digest: str):
+    # TODO handle file ext (jpg vs png)
     image = Image.get(digest)
     response = StreamingResponse(image.thumb(), media_type="image/jpeg")
+    response.headers["Content-Disposition"] = f"inline; filename={image.path.name}"
+    return response
+
+
+@app.get("/img/{digest}", response_class=HTMLResponse)
+def img(request: Request, digest: str):
+    image = Image.get(digest)
+    response = StreamingResponse(image.full(), media_type="image/jpeg")
     response.headers["Content-Disposition"] = f"inline; filename={image.path.name}"
     return response
