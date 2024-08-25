@@ -1,6 +1,5 @@
 import os
 import logging
-from pathlib import Path
 
 import toml
 from nagra import Transaction, Schema
@@ -20,12 +19,13 @@ natural_key = ["digest", "value"]
 digest = "str"
 value = "str"
 """
-Schema.default.load(schema_toml)
+Schema.default.load_toml(schema_toml)
 
 # Setup logging
 fmt = "%(levelname)s:%(asctime).19s: %(message)s"
 logging.basicConfig(format=fmt)
 logger = logging.getLogger("barber")
+logger.setLevel("INFO")
 if os.environ.get("BARBER_DEBUG"):
     logger.setLevel("DEBUG")
     logger.debug("Log level set to debug")

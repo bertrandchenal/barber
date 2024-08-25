@@ -8,7 +8,7 @@
   <img src="/thumb/{{image.digest}}/{{image.path.name}}" title="{{image.path.name}}">
 </a>
 <button hx-post="/star/{{image.digest}}/{{image.path.name}}" hx-swap="innerHTML">
-  ★
+  {{"★" if image.starred else "☆"}}
 </button>
 {% endfor %}
 
