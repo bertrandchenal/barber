@@ -4,8 +4,9 @@
 <h1 class="text-3xl font-bold underline">Folder</h1>
 
 {% for image in folder.images %}
-<a href="/img/{{image.digest}}/{{image.path.name}}">
-  <img src="/thumb/{{image.digest}}/{{image.path.name}}" title="{{image.path.name}}">
+
+<a href="/solo/{{image.digest}}/{{image.path.name}}">
+  <img src="/img/{{image.digest}}/{{image.path.name}}?thumb=True" title="{{image.path.name}}">
 </a>
 <button hx-post="/star/{{image.digest}}/{{image.path.name}}" hx-swap="innerHTML">
   {{"★" if image.starred else "☆"}}

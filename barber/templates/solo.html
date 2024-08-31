@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+
+<img src="/img/{{image.digest}}/{{image.path.name}}" title="{{image.path.name}}">
+<button hx-post="/star/{{image.digest}}/{{image.path.name}}" hx-swap="innerHTML">
+  {{"★" if image.starred else "☆"}}
+</button>
+
+{% endblock %}

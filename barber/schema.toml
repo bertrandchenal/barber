@@ -1,0 +1,12 @@
+[thumb]
+natural_key = ["digest"]
+[thumb.columns]
+digest = "str"
+content = "blob"
+created_at = "timestamp"
+
+[tag]
+natural_key = ["digest", "value"]
+[tag.columns]
+digest = "str"
+value = "str"

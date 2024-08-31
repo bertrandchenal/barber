@@ -1,9 +1,6 @@
 import os
-import argparse
-from io import BytesIO
 from pathlib import Path
 
-import uvicorn
 import jinja2
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -11,11 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from barber.folder import Collection, Image
-from barber.utils import load_config
+from barber.utils import config
 
 
 HERE = Path(__file__).parent
-cfg = load_config(Path(os.environ.get("BARBER_TOML", "./barber.toml")))
+cfg = config()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -37,7 +34,7 @@ def read_item(request: Request):
 
 
 @app.get("/folder/{name}/{pos}", response_class=HTMLResponse)
-def read_item(request: Request, name: str, pos: int):
+def folder(request: Request, name: str, pos: int):
     resp = templates.TemplateResponse(
         request=request,
         name="folder.html",
@@ -48,11 +45,12 @@ def read_item(request: Request, name: str, pos: int):
     return resp
 
 
-@app.get("/thumb/{digest}/{filename}", response_class=HTMLResponse)
-def thumb(request: Request, digest: str):
+@app.get("/img/{digest}/{filename}", response_class=HTMLResponse)
+def img(request: Request, digest: str, thumb: bool = False):
     # TODO handle file ext (jpg vs png)
     image = Image.get(digest)
-    response = StreamingResponse(image.thumb(), media_type="image/jpeg")
+    src = image.thumb() if thumb else image.full()
+    response = StreamingResponse(src, media_type="image/jpeg")
     response.headers["Content-Disposition"] = f"inline; filename={image.path.name}"
     return response
 
@@ -64,9 +62,14 @@ def star(request: Request, digest: str):
     return "★" if value else "☆"
 
 
-@app.get("/img/{digest}/{filename}", response_class=HTMLResponse)
-def img(request: Request, digest: str):
+@app.get("/solo/{digest}/{filename}", response_class=HTMLResponse)
+def solo(request: Request, digest: str):
     image = Image.get(digest)
-    response = StreamingResponse(image.full(), media_type="image/jpeg")
-    response.headers["Content-Disposition"] = f"inline; filename={image.path.name}"
-    return response
+    resp = templates.TemplateResponse(
+        request=request,
+        name="solo.html",
+        context={
+            "image": image,
+        },
+    )
+    return resp

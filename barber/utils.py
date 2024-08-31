@@ -1,25 +1,15 @@
 import os
 import logging
+from pathlib import Path
+from functools import lru_cache
 
 import toml
 from nagra import Transaction, Schema
 
-# Define schema
-schema_toml = """
-[thumb]
-natural_key = ["digest"]
-[thumb.columns]
-digest = "str"
-content = "blob"
-created_at = "timestamp"
+HERE = Path(__file__).parent
 
-[tag]
-natural_key = ["digest", "value"]
-[tag.columns]
-digest = "str"
-value = "str"
-"""
-Schema.default.load_toml(schema_toml)
+# Define schema
+Schema.default.load_toml(HERE / 'schema.toml')
 
 # Setup logging
 fmt = "%(levelname)s:%(asctime).19s: %(message)s"
@@ -30,6 +20,7 @@ if os.environ.get("BARBER_DEBUG"):
     logger.setLevel("DEBUG")
     logger.debug("Log level set to debug")
 
+
 # Init empty config
 cfg = {}
 
@@ -39,6 +30,8 @@ def init_db(db_uri):
         Schema.default.create_tables()
 
 
-def load_config(path):
+@lru_cache
+def config():
+    path = Path(os.environ.get("BARBER_TOML", "./barber.toml"))
     cfg.update(toml.load(path.open()))
     return cfg

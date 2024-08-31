@@ -2,3 +2,9 @@
 "Bertrand" = "~/image/20*"
 "Alice" = "~/image/alice/20*"
 "Wallpaper" = "~/image/wallpaper"
+
+
+[destination]
+host_alias = "chenal"
+sizes = [1600, 800, 400]
+root = 'images'

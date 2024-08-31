@@ -1,20 +1,21 @@
 import io
 import os
-import uuid
 from datetime import datetime
 from hashlib import md5
 from glob import glob
 from pathlib import Path
+from functools import lru_cache
 
 from nagra import Transaction, Table
 from PIL import Image as PILImage, ImageOps
 
-from barber.utils import logger, init_db
+from barber.utils import logger, init_db, config
 
-
+cfg = config()
 DISK_MIN_FILE_SIZE = 100 * 1024
 OK_EXT = (".png", ".jpg", ".jpeg")
 DIGEST_HEAD = 4 * 1024
+THUMB_SIZE = 640
 
 
 def digest(content):
@@ -25,7 +26,6 @@ class Tags:
 
     _tags = None
 
-    @classmethod
     def __init__(self, folder):
         self.folder = folder
         with Transaction(folder.db_uri):
@@ -56,7 +56,7 @@ class Folder:
         init_db(self.db_uri)
         self.tags = Tags(self)
         self.images = [Image(p, self) for p in sorted(self._images())]
-        logger.info("Added folder '%s' wih %s images", self.path, len(self.images))
+        logger.info("Found folder '%s' wih %s images", self.path, len(self.images))
 
     def _images(self):
         for file in self.path.iterdir():
@@ -69,18 +69,44 @@ class Folder:
     def is_image(f):
         return f.is_file() and f.suffix.lower() in OK_EXT
 
+    def upload(self, minio_client):
+        sizes = cfg['destination']['sizes']
+        root = cfg['destination']['root']
+        name = self.path.name
+        on_server = list(minio_client.ls(f'{root}/{name}'))
+        # on_server looks like ['2019.01/DSCF6630@1600.JPG']
+        for image in self.images:
+            if not image.starred:
+                continue
+            for size in sizes:
+                dest = f'{name}/{image.path.stem}@{size}{image.path.suffix}'
+                # dest_path = rel_dir / f'{path.stem}@{size}{path.suffix}'
+                if str(dest) in on_server:
+                    continue
+                content = image.resize(size)
+                logger.info("Upload to %s", dest)
+                minio_client.send(content, Path('images') / dest)
+
 
 class Collection:
     def __init__(self):
-        self.folders = {}
+        self._sources = {}
 
     def add_source(self, name: str, pattern: str):
-        pattern = os.path.expanduser(pattern)
-        if "*" in pattern:
-            folders = list(Folder(Path(p)) for p in sorted(glob(pattern)))
-        else:
-            folders = [Folder(Path(pattern))]
-        self.folders[name] = folders
+        self._sources[name] = pattern
+
+    @property
+    @lru_cache
+    def folders(self):
+        res = {}
+        for name, pattern in self._sources.items():
+            pattern = os.path.expanduser(pattern)
+            if "*" in pattern:
+                folders = list(Folder(Path(p)) for p in sorted(glob(pattern)))
+            else:
+                folders = [Folder(Path(pattern))]
+            res[name] = folders
+        return res
 
 
 class Image:
@@ -106,21 +132,28 @@ class Image:
                 (content,) = record
                 return io.BytesIO(content)
             # Compute thumb
-            logger.info("Generate thumbnail for %s", self.path)
-            im = PILImage.open(self.path)
-            im.thumbnail((640, 480))  # im.draft('RGB',(320, 240))
-            ImageOps.exif_transpose(im, in_place=True)
-            thumb = io.BytesIO()
-            fmt = "PNG" if self.path.suffix.lower() == ".png" else "JPEG"
-            im.save(thumb, format=fmt)
-            thumb.seek(0)
+            content = self.resize(THUMB_SIZE)
             # Save to cache and return
             thumb_table.upsert().execute(
                 self.digest,
-                thumb.getvalue(),
+                content,
                 datetime.now(),
             )
-            return thumb
+            return content
+
+    def resize(self, max_side):
+        logger.info("Generate thumbnail for %s", self.path)
+        im = PILImage.open(self.path)
+        try:
+            im.thumbnail((max_side, max_side))  # im.draft('RGB',(320, 240))
+        except OSError:
+            logger.exception(f"Unable to resize {self.path}")
+        ImageOps.exif_transpose(im, in_place=True)
+        thumb = io.BytesIO()
+        fmt = "PNG" if self.path.suffix.lower() == ".png" else "JPEG"
+        im.save(thumb, format=fmt)
+        thumb.seek(0)
+        return thumb.getvalue()
 
     @property
     def starred(self):
