@@ -1,5 +1,6 @@
 import io
 import os
+from bisect import bisect_left, bisect_right
 from datetime import datetime
 from hashlib import md5
 from glob import glob
@@ -139,7 +140,22 @@ class Image:
                 content,
                 datetime.now(),
             )
-            return content
+            return io.BytesIO(content)
+
+    def __lt__(self, other):
+        return self.path < other.path
+
+    @property
+    @lru_cache
+    def next(self):
+        pos = bisect_right(self.folder.images, self)
+        return self.folder.images[pos]
+
+    @property
+    @lru_cache
+    def prev(self):
+        pos = bisect_left(self.folder.images, self)
+        return self.folder.images[pos]
 
     def resize(self, max_side):
         logger.info("Generate thumbnail for %s", self.path)
