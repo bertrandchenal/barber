@@ -1,6 +1,7 @@
 [sources]
 "Bertrand" = "~/image/20*"
 "Alice" = "~/image/alice/20*"
+"GPhoto" = "~/gphoto/Takeout/Google Photos/Photos*"
 "Wallpaper" = "~/image/wallpaper"
 
 

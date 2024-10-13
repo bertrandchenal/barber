@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block body %}
-
+<a href="/solo/{{image.prev.digest}}/{{image.prev.path.name}}">PREV</a>
+<button hx-post="/star/{{image.digest}}/{{image.path.name}}" hx-swap="innerHTML">
+  {{"★" if image.starred else "☆"}}
+</button>
+<a href="/solo/{{image.next.digest}}/{{image.next.path.name}}">NEXT</a>
 <img
   src="/img/{{image.digest}}/{{image.path.name}}"
   title="{{image.path.name}}"
@@ -8,9 +12,7 @@
   hx-on:click="htmx.toggleClass(htmx.find('img'), 'solo')"
   >
 
-<a href="/solo/{{image.prev.digest}}/{{image.prev.path.name}}">PREV</a>
-<button hx-post="/star/{{image.digest}}/{{image.path.name}}" hx-swap="innerHTML">
-  {{"★" if image.starred else "☆"}}
-</button>
-<a href="/solo/{{image.next.digest}}/{{image.next.path.name}}">NEXT</a>
+<pre>
+{{image.exif}}
+</pre>
 {% endblock %}

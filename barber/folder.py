@@ -9,6 +9,7 @@ from functools import lru_cache
 
 from nagra import Transaction, Table
 from PIL import Image as PILImage, ImageOps
+import exifread
 
 from barber.utils import logger, init_db, config
 
@@ -16,8 +17,8 @@ cfg = config()
 DISK_MIN_FILE_SIZE = 100 * 1024
 OK_EXT = (".png", ".jpg", ".jpeg")
 DIGEST_HEAD = 4 * 1024
-THUMB_SIZE = 640
-
+THUMB_SIZE = 800
+EXIF_KEYS = ['Make', 'Model', 'DateTime']
 
 def digest(content):
     return md5(content).hexdigest()
@@ -84,7 +85,10 @@ class Folder:
                 # dest_path = rel_dir / f'{path.stem}@{size}{path.suffix}'
                 if str(dest) in on_server:
                     continue
-                content = image.resize(size)
+                if size == THUMB_SIZE:
+                    content = image.thumb()
+                else:
+                    content = image.resize(size)
                 logger.info("Upload to %s", dest)
                 minio_client.send(content, Path('images') / dest)
 
@@ -142,6 +146,15 @@ class Image:
             )
             return io.BytesIO(content)
 
+    @property
+    @lru_cache(1000)
+    def exif(self):
+        res = []
+        tags = exifread.process_file(open(self.path, 'rb'))
+        for key, val in tags.items():
+            res.append(f"{key}: {val}")
+        return '\n'.join(res)
+
     def __lt__(self, other):
         return self.path < other.path
 
@@ -149,12 +162,14 @@ class Image:
     @lru_cache
     def next(self):
         pos = bisect_right(self.folder.images, self)
+        pos = pos - 1 if pos == len(self.folder.images) else pos
         return self.folder.images[pos]
 
     @property
     @lru_cache
     def prev(self):
         pos = bisect_left(self.folder.images, self)
+        pos = pos - 1 if pos > 0 else pos
         return self.folder.images[pos]
 
     def resize(self, max_side):
